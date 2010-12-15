@@ -20,6 +20,7 @@
 %<package>\ProvidesPackage{locality}
 %<package> [2010/11/11 v0.3 Various macros for keeping things local]
 %<package>\RequirePackage{etoolbox}[2009/08/06]
+%<package>\RequirePackage{etex}[1998/03/26]
 %
 %<*driver>
 \documentclass{ltxdoc}
@@ -33,7 +34,7 @@
 %</driver>
 % \fi
 %
-% \CheckSum{1055}
+% \CheckSum{1058}
 %
 % \CharacterTable
 % {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
@@ -64,7 +65,8 @@
 %           accepting argument lists require comma delimited lists.  Added
 %           commands to make registers local.  Added local and nonlocal
 %           commands for chars.  Made \string\savevalue and \string\restorevalue
-%           do the right thing with registers.  XXX TODO: Add documentation for
+%           do the right thing with registers.  Added requirement for etex-pkg.
+%           XXX TODO: Add documentation for
 %           new commands, test them, fix some spelling.  Give \string\makecommandslocal
 %           a saner name and deprecate the old one.  Deprecate \string\manyaftergroup.
 %           Update changes.txt.  Make unit tests.}
@@ -363,6 +365,7 @@
 % \begin{macro}{\DeclareNonlocalDimen}
 % \begin{macro}{\DeclareNonlocalSkip}
 % \begin{macro}{\DeclareNonlocalMuskip}
+% \begin{macro}{\DeclareNonlocalMathChar}
 % \begin{macro}{\DeclareNonlocalChar}
 % \begin{macro}{\DeclareNonlocalToks}
 %    \begin{macrocode}
@@ -382,10 +385,14 @@
 \newcommand{\DeclareNonlocalChar}[1]{%
   \locality@DeclareNonlocalThing{\expandafter\chardef\expandafter#1\expandafter=#1}%
 }
+\newcommand{\DeclareNonlocalMathChar}[1]{%
+  \locality@DeclareNonlocalThing{\expandafter\mathchardef\expandafter#1\expandafter=#1}%
+}
 \newcommand{\DeclareNonlocalToks}[1]{%
   \locality@DeclareNonlocalThing{\expandafter#1\expandafter=\expandafter{\the#1}}%
 }
 %    \end{macrocode}
+% \end{macro}
 % \end{macro}
 % \end{macro}
 % \end{macro}
@@ -402,6 +409,7 @@
 % \begin{macro}{\DeclareNonlocalSkips}
 % \begin{macro}{\DeclareNonlocalMuskips}
 % \begin{macro}{\DeclareNonlocalChars}
+% \begin{macro}{\DeclareNonlocalMathChars}
 % \begin{macro}{\DeclareNonlocalTokses}
 %    \begin{macrocode}
 \newcommand{\DeclareNonlocalMacros}[1]{\locality@parseargumentlist{\DeclareNonlocalMacro}{#1}}
@@ -411,8 +419,10 @@
 \let\DeclareNonlocalSkips=\DeclareNonlocalTheRegisters
 \let\DeclareNonlocalMuskips=\DeclareNonlocalTheRegisters
 \newcommand{\DeclareNonlocalChars}[1]{\locality@parseargumentlist{\DeclareNonlocalChar}{#1}}
+\newcommand{\DeclareNonlocalMathChars}[1]{\locality@parseargumentlist{\DeclareNonlocalMathChar}{#1}}
 \newcommand{\DeclareNonlocalTokses}[1]{\locality@parseargumentlist{\DeclareNonlocalToks}{#1}}
 %    \end{macrocode}
+% \end{macro}
 % \end{macro}
 % \end{macro}
 % \end{macro}
@@ -441,7 +451,7 @@
 %
 % \begin{macro}{\locality@branchbymeaningtype}
 % Branches based on whether its meaning is |\char|, |\count|,
-% |\dimen|, |\glue|, |\muskip|, |\skip|, |\toks|, an expandable macro, or
+% |\dimen|, |\mathchar|, |\muskip|, |\skip|, |\toks|, expandable macro, or
 % something else.
 %    \begin{macrocode}
 \long\def\locality@ifempty#1\then#2#3{\ifstrempty{#1}{#2}{#1}}
@@ -456,7 +466,7 @@
 \expandafter\locality@swap\expandafter{\meaning\dimen}{\long\def\@locality@ifdimen#1}#2\then#3#4{%
   \ifstrempty{#1}{\ifstrempty{#2}{#4}{\locality@ifone{#2}{#4}{#3}}}{#4}%
 }
-\expandafter\locality@swap\expandafter{\meaning\glue}{\long\def\@locality@ifglue#1}#2\then#3#4{%
+\expandafter\locality@swap\expandafter{\meaning\mathchar}{\long\def\@locality@ifmathchar#1}#2\then#3#4{%
   \ifstrempty{#1}{\ifstrempty{#2}{#4}{\locality@ifone{#2}{#4}{#3}}}{#4}%
 }
 \expandafter\locality@swap\expandafter{\meaning\muskip}{\long\def\@locality@ifmuskip#1}#2\then#3#4{%
@@ -476,7 +486,7 @@
 \locality@passexpanded{\locality@passexpanded{\long\def\locality@ifchar#1#2#3}}{\expandafter\locality@swap\expandafter{\meaning\char"}{\expandafter\@locality@ifchar\meaning#1}\then{#2}{#3}}
 \locality@passexpanded{\locality@passexpanded{\long\def\locality@ifcount#1#2#3}}{\expandafter\locality@swap\expandafter{\meaning\count}{\expandafter\@locality@ifcount\meaning#1}\then{#2}{#3}}
 \locality@passexpanded{\locality@passexpanded{\long\def\locality@ifdimen#1#2#3}}{\expandafter\locality@swap\expandafter{\meaning\dimen}{\expandafter\@locality@ifdimen\meaning#1}\then{#2}{#3}}
-\locality@passexpanded{\locality@passexpanded{\long\def\locality@ifglue#1#2#3}}{\expandafter\locality@swap\expandafter{\meaning\glue}{\expandafter\@locality@ifglue\meaning#1}\then{#2}{#3}}
+\locality@passexpanded{\locality@passexpanded{\long\def\locality@ifmathchar#1#2#3}}{\expandafter\locality@swap\expandafter{\meaning\mathchar}{\expandafter\@locality@ifmathchar\meaning#1}\then{#2}{#3}}
 \locality@passexpanded{\locality@passexpanded{\long\def\locality@ifmuskip#1#2#3}}{\expandafter\locality@swap\expandafter{\meaning\muskip}{\expandafter\@locality@ifmuskip\meaning#1}\then{#2}{#3}}
 \locality@passexpanded{\locality@passexpanded{\long\def\locality@ifskip#1#2#3}}{\expandafter\locality@swap\expandafter{\meaning\skip}{\expandafter\@locality@ifskip\meaning#1}\then{#2}{#3}}
 \locality@passexpanded{\locality@passexpanded{\long\def\locality@iftoks#1#2#3}}{\expandafter\locality@swap\expandafter{\meaning\toks}{\expandafter\@locality@iftoks\meaning#1}\then{#2}{#3}}
@@ -486,7 +496,7 @@
   \locality@ifchar{#1}{#2}{%
   \locality@ifcount{#1}{#3}{%
   \locality@ifdimen{#1}{#4}{%
-  \locality@ifglue{#1}{#5}{%
+  \locality@ifmathchar{#1}{#5}{%
   \locality@ifmuskip{#1}{#6}{%
   \locality@ifskip{#1}{#7}{%
   \locality@iftoks{#1}{#8}{%
@@ -532,7 +542,7 @@
 % \begin{macro}{\savechar}
 % \begin{macro}{\savecount}
 % \begin{macro}{\savedimen}
-% \begin{macro}{\saveglue}
+% \begin{macro}{\savemathchar}
 % \begin{macro}{\savemuskip}
 % \begin{macro}{\saveskip}
 % \begin{macro}{\savetoks}
@@ -540,26 +550,27 @@
 % \begin{macro}{\savechars}
 % \begin{macro}{\savecounts}
 % \begin{macro}{\savedimens}
-% \begin{macro}{\saveglues}
+% \begin{macro}{\savemathchars}
 % \begin{macro}{\savemuskips}
 % \begin{macro}{\saveskips}
 % \begin{macro}{\savetokses}
 %    \begin{macrocode}
 \def\locality@newchar#1{\chardef#1=0\relax}
+\def\locality@newmathchar#1{\mathchardef#1=0\relax}
 \newcommand{\savemacro}[2][locality backup ]{\locality@savething[#1]{\@gobble}{\let}{\@gobble}{#2}}
 \newcommand{\savechar}[2][locality backup ]{\locality@savething[#1]{\locality@newchar}{\chardef}{\@gobble}{#2}}
-\newcommand{\savecount}[2][locality backup ]{\locality@savething[#1]{\newcount}{\@empty}{\@gobble}{#2}}
-\newcommand{\savedimen}[2][locality backup ]{\locality@savething[#1]{\newdimen}{\@empty}{\@gobble}{#2}}
-\newcommand{\saveglue}[2][locality backup ]{\locality@savething[#1]{\newglue}{\@empty}{\@gobble}{#2}}
-\newcommand{\savemuskip}[2][locality backup ]{\locality@savething[#1]{\newmuskip}{\@empty}{\@gobble}{#2}}
-\newcommand{\saveskip}[2][locality backup ]{\locality@savething[#1]{\newskip}{\@empty}{\@gobble}{#2}}
-\newcommand{\savetoks}[2][locality backup ]{\locality@savething[#1]{\newtoks}{\@empty}{\@gobble}{#2}}
+\newcommand{\savecount}[2][locality backup ]{\locality@savething[#1]{\loccount}{\@empty}{\@gobble}{#2}}
+\newcommand{\savedimen}[2][locality backup ]{\locality@savething[#1]{\locdimen}{\@empty}{\@gobble}{#2}}
+\newcommand{\savemathchar}[2][locality backup ]{\locality@savething[#1]{\locality@newmathchar}{\mathchardef}{\@gobble}{#2}}
+\newcommand{\savemuskip}[2][locality backup ]{\locality@savething[#1]{\locmuskip}{\@empty}{\@gobble}{#2}}
+\newcommand{\saveskip}[2][locality backup ]{\locality@savething[#1]{\locskip}{\@empty}{\@gobble}{#2}}
+\newcommand{\savetoks}[2][locality backup ]{\locality@savething[#1]{\loctoks}{\@empty}{\@gobble}{#2}}
 
 \newcommand{\savemacros}[2][locality backup ]{\locality@parseargumentlist{\savemacro[#1]}{#2}}
 \newcommand{\savechars}[2][locality backup ]{\locality@parseargumentlist{\savechar[#1]}{#2}}
 \newcommand{\savecounts}[2][locality backup ]{\locality@parseargumentlist{\savecount[#1]}{#2}}
 \newcommand{\savedimens}[2][locality backup ]{\locality@parseargumentlist{\savedimen[#1]}{#2}}
-\newcommand{\saveglues}[2][locality backup ]{\locality@parseargumentlist{\saveglue[#1]}{#2}}
+\newcommand{\savemathchars}[2][locality backup ]{\locality@parseargumentlist{\savemathchar[#1]}{#2}}
 \newcommand{\savemuskips}[2][locality backup ]{\locality@parseargumentlist{\savemuskip[#1]}{#2}}
 \newcommand{\saveskips}[2][locality backup ]{\locality@parseargumentlist{\saveskip[#1]}{#2}}
 \newcommand{\savetokses}[2][locality backup ]{\locality@parseargumentlist{\savetoks[#1]}{#2}}%
@@ -586,7 +597,7 @@
 % \begin{macro}{\restorechar}
 % \begin{macro}{\restorecount}
 % \begin{macro}{\restoredimen}
-% \begin{macro}{\restoreglue}
+% \begin{macro}{\restoremathchar}
 % \begin{macro}{\restoremuskip}
 % \begin{macro}{\restoreskip}
 % \begin{macro}{\restoretoks}
@@ -594,17 +605,16 @@
 % \begin{macro}{\restorechars}
 % \begin{macro}{\restorecounts}
 % \begin{macro}{\restoredimens}
-% \begin{macro}{\restoreglues}
+% \begin{macro}{\restoremathchars}
 % \begin{macro}{\restoremuskips}
 % \begin{macro}{\restoreskips}
 % \begin{macro}{\restoretokses}
 %    \begin{macrocode}
-\def\locality@newchar#1{\chardef#1=0\relax}
 \newcommand{\restoremacro}[2][locality backup ]{\locality@restorething[#1]{\let}{\@gobble}{#2}}
 \newcommand{\restorechar}[2][locality backup ]{\locality@restorething[#1]{\chardef}{\@gobble}{#2}}
 \newcommand{\restorecount}[2][locality backup ]{\locality@restorething[#1]{\@empty}{\@gobble}{#2}}
 \newcommand{\restoredimen}[2][locality backup ]{\locality@restorething[#1]{\@empty}{\@gobble}{#2}}
-\newcommand{\restoreglue}[2][locality backup ]{\locality@restorething[#1]{\@empty}{\@gobble}{#2}}
+\newcommand{\restoremathchar}[2][locality backup ]{\locality@restorething[#1]{\mathchardef}{\@gobble}{#2}}
 \newcommand{\restoremuskip}[2][locality backup ]{\locality@restorething[#1]{\@empty}{\@gobble}{#2}}
 \newcommand{\restoreskip}[2][locality backup ]{\locality@restorething[#1]{\@empty}{\@gobble}{#2}}
 \newcommand{\restoretoks}[2][locality backup ]{\locality@restorething[#1]{\@empty}{\@gobble}{#2}}
@@ -613,7 +623,7 @@
 \newcommand{\restorechars}[2][locality backup ]{\locality@parseargumentlist{\restorechar[#1]}{#2}}
 \newcommand{\restorecounts}[2][locality backup ]{\locality@parseargumentlist{\restorecount[#1]}{#2}}
 \newcommand{\restoredimens}[2][locality backup ]{\locality@parseargumentlist{\restoredimen[#1]}{#2}}
-\newcommand{\restoreglues}[2][locality backup ]{\locality@parseargumentlist{\restoreglue[#1]}{#2}}
+\newcommand{\restoremathchars}[2][locality backup ]{\locality@parseargumentlist{\restoremathchar[#1]}{#2}}
 \newcommand{\restoremuskips}[2][locality backup ]{\locality@parseargumentlist{\restoremuskip[#1]}{#2}}
 \newcommand{\restoreskips}[2][locality backup ]{\locality@parseargumentlist{\restoreskip[#1]}{#2}}
 \newcommand{\restoretokses}[2][locality backup ]{\locality@parseargumentlist{\restoretoks[#1]}{#2}}%
@@ -649,7 +659,7 @@
 % \begin{macro}{\pushchar}
 % \begin{macro}{\pushcount}
 % \begin{macro}{\pushdimen}
-% \begin{macro}{\pushglue}
+% \begin{macro}{\pushmathchar}
 % \begin{macro}{\pushmuskip}
 % \begin{macro}{\pushskip}
 % \begin{macro}{\pushtoks}
@@ -657,17 +667,16 @@
 % \begin{macro}{\pushchars}
 % \begin{macro}{\pushcounts}
 % \begin{macro}{\pushdimens}
-% \begin{macro}{\pushglues}
+% \begin{macro}{\pushmathchars}
 % \begin{macro}{\pushmuskips}
 % \begin{macro}{\pushskips}
 % \begin{macro}{\pushtokses}
 %    \begin{macrocode}
-\def\locality@newchar#1{\chardef#1=0\relax}
 \newcommand{\pushmacro}[2][locality backup ]{\locality@pushthing[#1]{\@gobble}{\let}{#2}}
 \newcommand{\pushchar}[2][locality backup ]{\locality@pushthing[#1]{\locality@newchar}{\chardef}}
 \newcommand{\pushcount}[2][locality backup ]{\locality@pushthing[#1]{\newcount}{\@empty}{#2}}
 \newcommand{\pushdimen}[2][locality backup ]{\locality@pushthing[#1]{\newdimen}{\@empty}{#2}}
-\newcommand{\pushglue}[2][locality backup ]{\locality@pushthing[#1]{\newglue}{\@empty}{#2}}
+\newcommand{\pushmathchar}[2][locality backup ]{\locality@pushthing[#1]{\locality@newmathchar}{\mathchardef}{#2}}
 \newcommand{\pushmuskip}[2][locality backup ]{\locality@pushthing[#1]{\newmuskip}{\@empty}{#2}}
 \newcommand{\pushskip}[2][locality backup ]{\locality@pushthing[#1]{\newskip}{\@empty}{#2}}
 \newcommand{\pushtoks}[2][locality backup ]{\locality@pushthing[#1]{\newtoks}{\@empty}{#2}}
@@ -676,7 +685,7 @@
 \newcommand{\pushchars}[2][locality backup ]{\locality@parseargumentlist{\pushchar[#1]}{#2}}
 \newcommand{\pushcounts}[2][locality backup ]{\locality@parseargumentlist{\pushcount[#1]}{#2}}
 \newcommand{\pushdimens}[2][locality backup ]{\locality@parseargumentlist{\pushdimen[#1]}{#2}}
-\newcommand{\pushglues}[2][locality backup ]{\locality@parseargumentlist{\pushglue[#1]}{#2}}
+\newcommand{\pushmathchars}[2][locality backup ]{\locality@parseargumentlist{\pushmathchar[#1]}{#2}}
 \newcommand{\pushmuskips}[2][locality backup ]{\locality@parseargumentlist{\pushmuskip[#1]}{#2}}
 \newcommand{\pushskips}[2][locality backup ]{\locality@parseargumentlist{\pushskip[#1]}{#2}}
 \newcommand{\pushtokses}[2][locality backup ]{\locality@parseargumentlist{\pushtoks[#1]}{#2}}
@@ -702,7 +711,7 @@
 % \begin{macro}{\popchar}
 % \begin{macro}{\popcount}
 % \begin{macro}{\popdimen}
-% \begin{macro}{\popglue}
+% \begin{macro}{\popmathchar}
 % \begin{macro}{\popmuskip}
 % \begin{macro}{\popskip}
 % \begin{macro}{\poptoks}
@@ -710,17 +719,16 @@
 % \begin{macro}{\popchars}
 % \begin{macro}{\popcounts}
 % \begin{macro}{\popdimens}
-% \begin{macro}{\popglues}
+% \begin{macro}{\popmathchars}
 % \begin{macro}{\popmuskips}
 % \begin{macro}{\popskips}
 % \begin{macro}{\poptokses}
 %    \begin{macrocode}
-\def\locality@newchar#1{\chardef#1=0\relax}
 \newcommand{\popmacro}[2][locality backup ]{\locality@popthing[#1]{\let}{#2}}
 \newcommand{\popchar}[2][locality backup ]{\locality@popthing[#1]{\chardef}}
 \newcommand{\popcount}[2][locality backup ]{\locality@popthing[#1]{\@empty}{#2}}
 \newcommand{\popdimen}[2][locality backup ]{\locality@popthing[#1]{\@empty}{#2}}
-\newcommand{\popglue}[2][locality backup ]{\locality@popthing[#1]{\@empty}{#2}}
+\newcommand{\popmathchar}[2][locality backup ]{\locality@popthing[#1]{\mathchardef}{#2}}
 \newcommand{\popmuskip}[2][locality backup ]{\locality@popthing[#1]{\@empty}{#2}}
 \newcommand{\popskip}[2][locality backup ]{\locality@popthing[#1]{\@empty}{#2}}
 \newcommand{\poptoks}[2][locality backup ]{\locality@popthing[#1]{\@empty}{#2}}
@@ -729,7 +737,7 @@
 \newcommand{\popchars}[2][locality backup ]{\locality@parseargumentlist{\popchar[#1]}{#2}}
 \newcommand{\popcounts}[2][locality backup ]{\locality@parseargumentlist{\popcount[#1]}{#2}}
 \newcommand{\popdimens}[2][locality backup ]{\locality@parseargumentlist{\popdimen[#1]}{#2}}
-\newcommand{\popglues}[2][locality backup ]{\locality@parseargumentlist{\popglue[#1]}{#2}}
+\newcommand{\popmathchars}[2][locality backup ]{\locality@parseargumentlist{\popmathchar[#1]}{#2}}
 \newcommand{\popmuskips}[2][locality backup ]{\locality@parseargumentlist{\popmuskip[#1]}{#2}}
 \newcommand{\popskips}[2][locality backup ]{\locality@parseargumentlist{\popskip[#1]}{#2}}
 \newcommand{\poptokses}[2][locality backup ]{\locality@parseargumentlist{\poptoks[#1]}{#2}}
@@ -763,28 +771,28 @@
 % \begin{macro}{\restorevalues}
 %    \begin{macrocode}
 \newcommand{\pushvalue}[2][locality backup ]{%
-  \csname push\locality@branchbymeaningtype{#2}{char}{count}{dimen}{glue}{muskip}{skip}{toks}{macro}{macro}\endcsname
+  \csname push\locality@branchbymeaningtype{#2}{char}{count}{dimen}{mathchar}{muskip}{skip}{toks}{macro}{macro}\endcsname
     [#1]{#2}
 }
 \newcommand{\pushvalues}[2][locality backup ]{\locality@parseargumentlist{\pushvalue[#1]}{#2}}
 
 \newcommand{\popvalue}[2][locality backup ]{%
-  \csname pop\locality@branchbymeaningtype{#2}{char}{count}{dimen}{glue}{muskip}{skip}{toks}{macro}{macro}\endcsname
+  \csname pop\locality@branchbymeaningtype{#2}{char}{count}{dimen}{mathchar}{muskip}{skip}{toks}{macro}{macro}\endcsname
     [#1]{#2}
 }
 \newcommand{\popvalues}[2][locality backup ]{\locality@parseargumentlist{\popvalue[#1]}{#2}}
 
 
 \newcommand{\savevalue}[2][locality backup ]{%
-  \csname save\locality@branchbymeaningtype{#2}{char}{count}{dimen}{glue}{muskip}{skip}{toks}{macro}{macro}\endcsname
+  \csname save\locality@branchbymeaningtype{#2}{char}{count}{dimen}{mathchar}{muskip}{skip}{toks}{macro}{macro}\endcsname
     [#1]{#2}
 }
 \newcommand{\savevalues}[2][locality backup ]{\locality@parseargumentlist{\savevalue[#1]}{#2}}
 
 \newcommand{\restorevalue}[2][locality backup ]{%
-  \csname restore\locality@branchbymeaningtype{#2}{char}{count}{dimen}{glue}{muskip}{skip}{toks}{macro}{macro}\endcsname
+  \csname restore\locality@branchbymeaningtype{#2}{char}{count}{dimen}{mathchar}{muskip}{skip}{toks}{macro}{macro}\endcsname
     [#1]{#2}
-}
+} 
 \newcommand{\restorevalues}[2][locality backup ]{\locality@parseargumentlist{\restorevalue[#1]}{#2}}
 %    \end{macrocode}
 % \end{macro}
