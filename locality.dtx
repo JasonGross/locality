@@ -810,6 +810,9 @@
 % Save the macros, run the code, then restore the values.
 %    \begin{macrocode}
 \newcommand{\makecommandslocal}[3][\string\makecommandslocal backup]{\pushvalues[#1]{#2}#3\popvalues[#1]{#2}}
+% I think the following breaks for special things like |\time|
+\newcommand{\maketheregisterlocal}[2]{\expandafter\locality@swap\expandafter{\expandafter#1\expandafter=\the#1\relax}{#2}}
+\newcommand{\maketoksregisterlocal}[2]{\expandafter\locality@swap\expandafter{\expandafter#1\expandafter=\expandafter{\the#1}\relax}{#2}}
 %    \end{macrocode}
 % \end{macro}
 %
