@@ -5,6 +5,7 @@
 *.glo
 *.aux
 *.log
+*.swo
 locality.zip
 locality.pdf
 locality.sty
