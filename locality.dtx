@@ -34,7 +34,7 @@
 %</driver>
 % \fi
 %
-% \CheckSum{1058}
+% \CheckSum{0}
 %
 % \CharacterTable
 % {Upper-case    \A\B\C\D\E\F\G\H\I\J\K\L\M\N\O\P\Q\R\S\T\U\V\W\X\Y\Z
@@ -339,16 +339,16 @@
 % First, back up |\endgroup| to a new macro.
 %    \begin{macrocode}
 \newcommand{\locality@DeclareNonlocalThing}[1]{%
+  \locality@patch@groups % make sure that |\begingroup| and |\aftergroup| 
+    % are patched.
   \locality@patch@aftergroup % first, patch |\aftergroup|
-  \expandafter\let
-  \csname endgroup \the\locality@local@group@non@local@macro@count
-    \endcsname=\endgroup
+  \cslet{endgroup \the\locality@local@group@non@local@macro@count}{\endgroup}%
 %    \end{macrocode}
 % Redefine |\endgroup| to, in order: revert it's definition, insert code to 
 % update the definition of the passed macro outside of the group, and call 
 % the (reverted) version of |\endgroup|.
 %    \begin{macrocode}
-  \expandafter\def\expandafter\endgroup\expandafter{%
+  \locality@passexpanded{\def\endgroup}{%
     \expandafter\expandafter\expandafter\let\expandafter
       \expandafter\expandafter\endgroup\expandafter\expandafter
       \csname endgroup \the\locality@local@group@non@local@macro@count
@@ -434,14 +434,26 @@
 %
 %
 % I redefine |\begingroup| to reset the locality macros, so nesting works.
+% Patching only occurs when you need non-local things, so that we don't make
+% groups that don't take advantage of this stop working.
+%
+% TODO: Decide whether or not it's worth it to unpatch grouping in subgroups.
+%       It'll make it less likely that we make mistakes, but more likely to
+%       eat up time if we're nesting groups.  It's probably worth it.
 %    \begin{macrocode}
 \newcount\locality@local@group@non@local@macro@count % Hopefully, this
 % won't collide with anything.  I hope putting this out here allows
 % proper nesting of groups
-\def\begingroup{\locality@tex@begingroup
+\newcommand\locality@patch@groups{%
+  \def\begingroup{\locality@tex@begingroup
+    \def\endgroup{\locality@tex@endgroup}% not \let, because
+                       % that would break my |\aftergroup| patch
+    \locality@local@group@non@local@macro@count=0
+  }%
   \def\endgroup{\locality@tex@endgroup}% not \let, because
-                     % that would break my |\aftergroup| patch
+                       % that would break my |\aftergroup| patch
   \locality@local@group@non@local@macro@count=0
+  \let\locality@patch@groups\relax
 }
 %    \end{macrocode}
 %
@@ -518,11 +530,11 @@
 %    \begin{macrocode}
 \newcommand{\locality@savething}[5][locality backup ]{%
   \ifcsundef{#1\string#5}{%
-    \expandafter#2\csname #1\string#5\endcsname
+    \expandafter\locality@swap\expandafter{\csname #1\string#5\endcsname}{#2}%
   }{%
     \locality@passexpanded{#4}{\csname #1\string#5\endcsname}%
   }%
-  \expandafter#3\csname #1\string#5\endcsname=#4%
+  \expandafter\locality@swap\expandafter{\csname #1\string#5\endcsname}{#3}=#5%
 }
 
 % Called as |\locality@restorething[prefix]{\set}{\recurse}{\thing}|
@@ -530,7 +542,7 @@
   \ifcsundef{#1\string#4}{%
     \undef#4%
   }{%
-    \expandafter#2\expandafter#4\expandafter=\csname #1\string#4\endcsname
+    \expandafter\locality@swap\expandafter{\csname #1\string#4\endcsname}{#2#4=}%
     \passexpanded{#3}{\csname #1\string#4\endcsname}%
   }%
 }
@@ -772,26 +784,26 @@
 %    \begin{macrocode}
 \newcommand{\pushvalue}[2][locality backup ]{%
   \csname push\locality@branchbymeaningtype{#2}{char}{count}{dimen}{mathchar}{muskip}{skip}{toks}{macro}{macro}\endcsname
-    [#1]{#2}
+    [#1]{#2}%
 }
 \newcommand{\pushvalues}[2][locality backup ]{\locality@parseargumentlist{\pushvalue[#1]}{#2}}
 
 \newcommand{\popvalue}[2][locality backup ]{%
   \csname pop\locality@branchbymeaningtype{#2}{char}{count}{dimen}{mathchar}{muskip}{skip}{toks}{macro}{macro}\endcsname
-    [#1]{#2}
+    [#1]{#2}%
 }
 \newcommand{\popvalues}[2][locality backup ]{\locality@parseargumentlist{\popvalue[#1]}{#2}}
 
 
 \newcommand{\savevalue}[2][locality backup ]{%
   \csname save\locality@branchbymeaningtype{#2}{char}{count}{dimen}{mathchar}{muskip}{skip}{toks}{macro}{macro}\endcsname
-    [#1]{#2}
+    [#1]{#2}%
 }
 \newcommand{\savevalues}[2][locality backup ]{\locality@parseargumentlist{\savevalue[#1]}{#2}}
 
 \newcommand{\restorevalue}[2][locality backup ]{%
   \csname restore\locality@branchbymeaningtype{#2}{char}{count}{dimen}{mathchar}{muskip}{skip}{toks}{macro}{macro}\endcsname
-    [#1]{#2}
+    [#1]{#2}%
 } 
 \newcommand{\restorevalues}[2][locality backup ]{\locality@parseargumentlist{\restorevalue[#1]}{#2}}
 %    \end{macrocode}
@@ -838,26 +850,21 @@
 % I try to make this forward-compatible, but if the definition of |\@cons|
 % changes too badly, this'll break.
 %    \begin{macrocode}
-\savevalues{\global,\gdef,\xdef,\@cons}
+\savevalues[locality globals global backup ]{\global,\gdef,\xdef,\@cons}
 {\def\begingroup{\begingroup\DeclareNonlocalMacro{##1}}%
   \expandafter\expandafter\expandafter
 }%
-\expandafter\expandafter\expandafter\def
-\expandafter\expandafter\expandafter\locality@cons
-\expandafter\expandafter\expandafter#%
-\expandafter\expandafter\expandafter1%
-\expandafter\expandafter\expandafter#%
-\expandafter\expandafter\expandafter2%
-\expandafter\expandafter\expandafter{\@cons{#1}{#2}}%
-\newcommand{\obeyglobal}{\restorevalues{\global\gdef\xdef\@cons}}
-\newcommand{\unignoreglobal}{\popvalues{\global,\gdef,\xdef,\@cons}}
+\locality@passexpanded{\locality@passexpanded{%
+  \def\locality@cons#1#2}}{\@cons{#1}{#2}}
+\newcommand{\obeyglobal}{\restorevalues[locality globals global backup ]{\global,\gdef,\xdef,\@cons}}
+\newcommand{\unignoreglobal}{\popvalues[locality globals backup ]{\global,\gdef,\xdef,\@cons}}
 \newcommand{\ignoreglobal}{%
-  \pushvalues{\global,\gdef,\xdef,\@cons}%
+  \pushvalues[locality globals backup ]{\global,\gdef,\xdef,\@cons}%
   \let\global=\relax \let\gdef=\def \let\xdef=\edef
   \let\@cons=\locality@cons
-  \expandafter\def\expandafter\unignoreglobal\expandafter{\expandafter
-  \def\expandafter\unignoreglobal\expandafter{\unignoreglobal}%
-  \unignoreglobal}%
+  \locality@passexpanded{\def\unignoreglobal}{\expandafter
+    \def\expandafter\unignoreglobal\expandafter{\unignoreglobal}%
+    \unignoreglobal}%
 }
 %    \end{macrocode}
 % \end{macro}
