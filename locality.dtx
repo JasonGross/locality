@@ -25,6 +25,7 @@
 %<*driver>
 \documentclass{ltxdoc}
 \usepackage{locality}
+\usepackage{url}
 \EnableCrossrefs
 \CodelineIndex
 \RecordChanges
@@ -64,8 +65,9 @@
 % \changes{v0.3}{2010/12/15}{Fixed some bugs with \string\@for.  Made all commands
 %           accepting argument lists require comma delimited lists.  Added
 %           commands to make registers local.  Added local and nonlocal
-%           commands for chars.  Made \string\savevalue and \string\restorevalue
+%           commands for chars.  Made \string\savevalue\space and \string\restorevalue\space
 %           do the right thing with registers.  Added requirement for etex-pkg.
+%           Made \string\locallydefine\space work with unexpandable macros.
 %           XXX TODO: Add documentation for
 %           new commands, test them, fix some spelling.  Give \string\makecommandslocal
 %           a saner name and deprecate the old one.  Deprecate \string\manyaftergroup.
@@ -96,6 +98,7 @@
 % I know them (please email me if you find other bugs, or have fixes for the
 % bugs I list).  I sometimes give extra description or justification.
 %
+%
 % \DescribeMacro{\manyaftergroup}
 % \noindent Usage: |\manyaftergroup|\marg{tokens} \par\noindent
 % Specification: The \meta{tokens} get placed after the current group \par\noindent
@@ -108,11 +111,9 @@
 % ToDo: Write a version of this macro that preserves spaces, allows braces.
 %
 % \DescribeMacro{\locallydefine}
-% \noindent Usage: |\locallydefine|\marg{macro}\marg{processing} \par\noindent
-% Specification: Execute \meta{processing} inside of a group, and make
-% the definition of |\macro| persist after the group ends. \par\noindent
-% Bugs: Changes via |\let| to an unexpandable macro yield an infinite recursive
-% loop.
+% \noindent Usage: |\locallydefine|\marg{macro}\marg{processing} \par
+% \noindent Specification: Execute \meta{processing} inside of a group, and make
+% the definition of |\macro| persist after the group ends. \par
 %
 % Normally, when you define a macro in a group, it's definition reverts after
 % the group ends, unless you use |\global|.  If you use |\global|, then the
@@ -126,7 +127,7 @@
 % Bugs: Changes via |\let| to an unexpandable macro yield an infinite recursive
 % loop.  Only works with |\begingroup| |\endgroup| (not with braces).
 %
-% This macro generalized |\locallydefine|.
+% This macro generalizes |\locallydefine|.
 %
 %
 % \DescribeMacro{\DeclareNonlocalMacros}
@@ -237,6 +238,31 @@
 \let\locality@tex@global=\global
 %    \end{macrocode}
 %
+%
+% \begin{macro}{\locality@ifbrace}
+% \begin{macro}{\locality@ifexpandable}
+% These macros are taken from 
+% \url{http://newsgroups.derkeiler.com/Archive/Comp/comp.text.tex/2010-12/msg00123.html}
+% and are used to determine whether we can |\def| a macro to its
+% current value, or if we need to do something more tricky.
+%    \begin{macrocode}
+\long\def\locality@ifbrace#1#2#3{%
+  \romannumeral\expandafter\@secondoftwo\expandafter{\expandafter
+  {\string#1.}\expandafter\@firstoftwo\expandafter{\iffalse}\fi
+  0 #2}{0 #3}%
+}
+%%---------------------------------------------------------------
+%% Check if brace-balanced argument is expandable:
+%%...............................................................
+\long\def\locality@ifexpandable#1#2#3{%
+  \romannumeral\locality@ifbrace{#1}\@secondoftwo{%
+  \ifblank{#1}\@secondoftwo{\expandafter\ifx\noexpand#1#1
+  \expandafter\@secondoftwo\else\expandafter\@firstoftwo\fi}}{0 #2}{0 #3}%
+}
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+%
 % \begin{macro}{\locality@global@non@collision@unique@count}
 % At various places, I want to have a macro associated with a certain name
 % which hasn't been used before.  I use this count to number them.  I use
@@ -288,13 +314,34 @@
 %    \end{macrocode}
 % \end{macro}
 %
+% \begin{macro}{\locality@let@or@def}
+%    \begin{macrocode}
+\def\locality@aftergroup@let@or@def#1#2{\locality@ifexpandable{#2}{%
+    \expandafter\def\expandafter#1\expandafter{#2}%
+  }{%
+  }%
+}
+
+%    \end{macrocode}
+% \end{macro}
 %
 % \begin{macro}{\locallydefine}
 % Execute the second argument passed locally, and then preserve the definition
 % of the first argument passed.
 %    \begin{macrocode}
-\newcommand{\locallydefine}[2]{{#2\expandafter}%
-  \expandafter\def\expandafter#1\expandafter{#1}}
+\newcommand{\locallydefine}[2]{\bgroup#2\locality@ifexpandable{#1}{%
+    \expandafter\egroup
+    \expandafter\def\expandafter#1\expandafter{#1}%
+  }{%
+    \global\advance\locality@global@non@collision@unique@count by 1
+    \global\cslet
+      {locality \string#1 \the\locality@global@non@collision@unique@count}%
+      {#1}%
+    \expandafter\egroup\expandafter\let
+      \expandafter#1
+      \csname locality \string#1 \the\locality@global@non@collision@unique@count\endcsname
+  }%
+}
 %    \end{macrocode}
 %
 % \end{macro}
