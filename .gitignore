@@ -6,6 +6,9 @@
 *.aux
 *.log
 *.swo
+*.lgout
+*.sty
+*.tex
 locality.zip
 locality.pdf
 locality.sty

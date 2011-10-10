@@ -32,7 +32,10 @@ and version 1.2 or later is part of all distributions of
 LaTeX version 1999/12/01 or later.
 \endpreamble
 
+\ifx\Make y\askforoverwritefalse\fi
+
 \generate{\file{locality.sty}{\from{locality.dtx}{package}}}
+\generate{\file{locality-qs.tex}{\from{locality.dtx}{test}}}
 
 \obeyspaces
 \Msg{****************************************************}

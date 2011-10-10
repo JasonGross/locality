@@ -19,8 +19,8 @@
 %<package>\NeedsTeXFormat{LaTeX2e}[1999/12/01]
 %<package>\ProvidesPackage{locality}
 %<package> [2010/11/11 v0.3 Various macros for keeping things local]
-%<package>\RequirePackage{etoolbox}[2009/08/06]
-%<package>\RequirePackage{etex}[1998/03/26]
+%<package|test>\RequirePackage{etoolbox}[2009/08/06]
+%<package|test>\RequirePackage{etex}[1998/03/26]
 %
 %<*driver>
 \documentclass{ltxdoc}
@@ -33,6 +33,15 @@
   \DocInput{locality.dtx}
 \end{document}
 %</driver>
+%
+%<*test>
+\RequirePackage{etextools}[2009/09/04]
+\RequirePackage{qstest}
+\RequirePackage{ifthen}
+\IncludeTests{*}
+\LogTests{lgout}{*}{*}
+\makeatletter
+%</test>
 % \fi
 %
 % \CheckSum{0}
@@ -68,6 +77,7 @@
 %           commands for chars.  Made \string\savevalue\space and \string\restorevalue\space
 %           do the right thing with registers.  Added requirement for etex-pkg.
 %           Made \string\locallydefine\space work with unexpandable macros.
+%           Started adding unit tests.
 %           XXX TODO: Add documentation for
 %           new commands, test them, fix some spelling.  Give \string\makecommandslocal
 %           a saner name and deprecate the old one.  Deprecate \string\manyaftergroup.
@@ -238,6 +248,13 @@
 \let\locality@tex@global=\global
 %    \end{macrocode}
 %
+% Some helper functions for testing.
+%    \begin{macrocode}
+%<*test>
+\newcommand{\testiftrue}[1]{#1{\boolean{true}}{\boolean{false}}}
+\newcommand{\testiffalse}[1]{#1{\boolean{false}}{\boolean{true}}}
+%</test>
+%    \end{macrocode}
 %
 % \begin{macro}{\locality@ifbrace}
 % \begin{macro}{\locality@ifexpandable}
@@ -259,6 +276,53 @@
   \ifblank{#1}\@secondoftwo{\expandafter\ifx\noexpand#1#1
   \expandafter\@secondoftwo\else\expandafter\@firstoftwo\fi}}{0 #2}{0 #3}%
 }
+%<*test>
+\begin{qstest}{\locality@ifbrace}{\locality@ifbrace, internals}
+  \ExpectIfThen{\testiffalse{\locality@ifbrace{\relax}}}
+  \ExpectIfThen{\testiffalse{\locality@ifbrace{\bgroup}}}
+  \ExpectIfThen{\testiftrue{\locality@ifbrace{{}}}}
+  \ExpectIfThen{\testiftrue{\locality@ifbrace{{{}}}}}
+  \ExpectIfThen{\testiffalse{\locality@ifbrace{\string{\string}}}}
+  \ExpectIfThen{\testiffalse{\ExpandNext{\locality@ifbrace}{\expandafter\string\expandafter{\string}}}}
+\end{qstest}
+\begin{qstest}{\locality@ifexpandable macros}{\locality@ifexpandable, internals}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{\relax}}}
+  \ExpectIfThen{\testiftrue{\locality@ifexpandable{\lbrace}}}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{\bgroup}}}
+  \ExpectIfThen{\testiftrue{\locality@ifexpandable{\newif}}}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{\bgroup}}}
+\end{qstest}
+\begin{qstest}{\locality@ifexpandable multi-macro sequences}{\locality@ifexpandable, internals}
+  \ExpectIfThen{\testiftrue{\locality@ifexpandable{\newif\newif}}}
+\end{qstest}
+\begin{qstest}{\locality@ifexpandable protected command}{\locality@ifexpandable, internals}
+  \protected\def\protectednewif{\newif}
+  \protected\def\protectedrelax{\relax}
+  \ExpectIfThen{\testiftrue{\locality@ifexpandable{\newif\newif}}}
+  \ExpectIfThen{\testiftrue{\locality@ifexpandable{\protectednewif}}}
+  \ExpectIfThen{\testiftrue{\locality@ifexpandable{\protectedrelax}}}
+\end{qstest}
+\begin{qstest}{\locality@ifexpandable braces}{\locality@ifexpandable, internals}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{{}}}}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{{}{}}}}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{{{}}}}}
+\end{qstest}
+\begin{qstest}{\locality@ifexpandable macros in braces}{\locality@ifexpandable, internals}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{{{\relax}}}}}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{{\relax}}}}
+  \ExpectIfThen{\testiffalse{\locality@ifexpandable{{{\newif}}}}}
+\end{qstest}
+\begin{qstest}{\locality@ifexpandable tricks with noexpand}{\locality@ifexpandable, internals}
+  \ExpectIfThen{\testiftrue{\ExpandNext{\locality@ifexpandable}{\expandafter\noexpand\expandafter\newif\noexpand\newif}}}
+  \ExpectIfThen{\testiftrue{\ExpandNext{\locality@ifexpandable}{\noexpand\newif\noexpand\newif}}}
+  \ExpectIfThen{\testiftrue{\ExpandNext{\locality@ifexpandable}{\noexpand\newif\newif}}}
+  \ExpectIfThen{\testiftrue{\expandnext{\locality@ifexpandable}{\expandafter\noexpand\expandafter\newif\noexpand\newif}}}
+  \ExpectIfThen{\testiftrue{\expandnext\expandnext{\locality@ifexpandable}{\expandafter\noexpand\expandafter\newif\noexpand\newif}}}
+  \ExpectIfThen{\testiftrue{\expandnext{\locality@ifexpandable}{\expandafter\newif\noexpand\newif}}}
+  \ExpectIfThen{\testiftrue{\expandnext{\locality@ifexpandable}{\noexpand\newif\noexpand\newif}}}
+  \ExpectIfThen{\testiftrue{\expandnext{\locality@ifexpandable}{\noexpand\newif\newif}}}
+\end{qstest}
+%</test>
 %    \end{macrocode}
 % \end{macro}
 % \end{macro}
@@ -287,7 +351,6 @@
 }
 %    \end{macrocode}
 % \end{macro}
-
 %
 %
 % \begin{macro}{\locality@parseargumentlist}
@@ -310,38 +373,64 @@
 %    \begin{macrocode}
 \long\def\@manyaftergroup#1{\if@nil#1 \else \aftergroup#1 
 \expandafter\@manyaftergroup\fi}
-\newcommand{\manyaftergroup}[1]{\@manyaftergroup#1\@nil}
+\newcommand{\manyaftergroup}[1]{%
+  \PackageWarning{locality}{Macro \string\manyaftergroup\space has been deprecated.
+    Use \string\AfterGroup\space from etextools instead.}%
+  \@manyaftergroup#1\@nil}
 %    \end{macrocode}
 % \end{macro}
 %
-% \begin{macro}{\locality@let@or@def}
-%    \begin{macrocode}
-\def\locality@aftergroup@let@or@def#1#2{\locality@ifexpandable{#2}{%
-    \expandafter\def\expandafter#1\expandafter{#2}%
-  }{%
-  }%
-}
-
-%    \end{macrocode}
-% \end{macro}
 %
 % \begin{macro}{\locallydefine}
 % Execute the second argument passed locally, and then preserve the definition
 % of the first argument passed.
+%
+% Question: Is it worth it to try to do fancy things with |\meaning|?
+% Probably not\dots
 %    \begin{macrocode}
-\newcommand{\locallydefine}[2]{\bgroup#2\locality@ifexpandable{#1}{%
-    \expandafter\egroup
-    \expandafter\def\expandafter#1\expandafter{#1}%
-  }{%
-    \global\advance\locality@global@non@collision@unique@count by 1
-    \global\cslet
-      {locality \string#1 \the\locality@global@non@collision@unique@count}%
-      {#1}%
-    \expandafter\egroup\expandafter\let
-      \expandafter#1
-      \csname locality \string#1 \the\locality@global@non@collision@unique@count\endcsname
-  }%
+\newcommand{\locallydefine}[2]{\bgroup#2%
+  \global\advance\locality@global@non@collision@unique@count by 1
+  \global\cslet
+    {locality \string#1 \the\locality@global@non@collision@unique@count}%
+    {#1}%
+  \expandafter\egroup\expandafter\let
+    \expandafter#1%
+    \csname locality \string#1 \the\locality@global@non@collision@unique@count\endcsname\relax
 }
+%<*test>
+\begin{qstest}{\locallydefine}{\locallydefine, grouping, api}
+  \undef\deftesti\def\expecteddeftesti{}
+  \undef\deftestii\def\expecteddeftestii{\relax}
+  \undef\lettesti\def\expectedlettesti{}
+  \undef\lettestii\let\expectedlettestii\relax
+  \undef\expectedlettestiii\def\lettestiii{\relax}
+
+  \locallydefine{\deftesti}
+    {\expandafter\def\expandafter\deftesti\expandafter{\expecteddeftesti}}
+  \ExpectIfThen{\ifx\deftesti\expecteddeftesti\boolean{true}\else\boolean{false}\fi}
+  
+  \locallydefine{\deftestii}
+    {\expandafter\def\expandafter\deftestii\expandafter{\expecteddeftestii}}
+  \ExpectIfThen{\ifx\deftestii\expecteddeftestii\boolean{true}\else\boolean{false}\fi}
+  
+  \locallydefine{\lettesti}
+    {\let\lettesti\expectedlettesti}
+  \ExpectIfThen{\ifx\lettesti\expectedlettesti\boolean{true}\else\boolean{false}\fi}
+
+  \locallydefine{\lettestii}
+    {\let\lettestii\expectedlettestii}
+  \ExpectIfThen{\ifx\lettestii\expectedlettestii\boolean{true}\else\boolean{false}\fi}
+
+  \locallydefine{\lettestiii}
+    {\let\lettestiii\expectedlettestiii}
+  \ExpectIfThen{\ifx\lettestiii\expectedlettestiii\boolean{true}\else\boolean{false}\fi}
+
+  \undef\testi\undef\bad\undef\undefined
+  \locallydefine{\testi}{\let\testi\@gobble\def\bad{\relax}}
+  \ExpectIfThen{\ifx\testi\@gobble\boolean{true}\else\boolean{false}\fi}
+  \ExpectIfThen{\ifdefined\bad\boolean{false}\else\boolean{true}\fi}
+\end{qstest}
+%</test>
 %    \end{macrocode}
 %
 % \end{macro}
@@ -1001,6 +1090,12 @@
 %    \end{macrocode}
 % \end{macro}
 %
+%    \begin{macrocode}
+%<*test>
+\LogClose{lgout}
+\stop
+%</test>
+%    \end{macrocode}
 %
 % \Finale
 \endinput
