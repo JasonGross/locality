@@ -1,6 +1,6 @@
 % \iffalse meta-comment
 %
-% Copyright (C) 2010 by Jason Gross (JasonGross9+locality@gmail.com)
+% Copyright (C) 2010--2011 by Jason Gross (JasonGross9+locality@gmail.com)
 %
 % This file may be distributed and/or modified under the
 % conditions of the LaTeX Project Public License, either
@@ -18,7 +18,7 @@
 % \iffalse
 %<package>\NeedsTeXFormat{LaTeX2e}[1999/12/01]
 %<package>\ProvidesPackage{locality}
-%<package> [2010/11/11 v0.3 Various macros for keeping things local]
+%<package> [2011/10/10 v0.3 Various macros for keeping things local]
 %<package|test>\RequirePackage{etoolbox}[2009/08/06]
 %<package|test>\RequirePackage{etex}[1998/03/26]
 %
@@ -36,8 +36,8 @@
 %
 %<*test>
 \RequirePackage{etextools}[2009/09/04]
-\RequirePackage{qstest}
-\RequirePackage{ifthen}
+\RequirePackage{qstest}[2007/02/21]
+\RequirePackage{ifthen}[2001/05/26]
 \IncludeTests{*}
 \LogTests{lgout}{*}{*}
 \makeatletter
@@ -71,7 +71,8 @@
 %           \string\DeclareNonlocal*\space to work with \string\aftergroup.
 %           Added requirement for etoolbox, so that patching takes place at
 %           the end of the preamble.}
-% \changes{v0.3}{2010/12/15}{Fixed some bugs with \string\@for.  Made all commands
+% \changes{v0.3}{2011/10/10}{Replaced \string\@for\space with
+%           \string\forcsvlist.  Made all commands
 %           accepting argument lists require comma delimited lists.  Added
 %           commands to make registers local.  Added local and nonlocal
 %           commands for chars.  Made \string\savevalue\space and \string\restorevalue\space
@@ -357,11 +358,7 @@
 % This macro parses an argument list, applying a given macro
 % to each element of the comma-separated list.
 %    \begin{macrocode}
-\newcommand{\locality@parseargumentlist}[2]{%
-  \@for\locality@argument@name:=\noexpand#2\do{%
-    \locality@passexpanded{#1}{\locality@argument@name}%
-  }%
-}
+\let\locality@parseargumentlist=\forcsvlist
 %    \end{macrocode}
 % \end{macro} 
 %
@@ -404,6 +401,7 @@
   \undef\lettesti\def\expectedlettesti{}
   \undef\lettestii\let\expectedlettestii\relax
   \undef\expectedlettestiii\def\lettestiii{\relax}
+  \undef\expectedlettestiv\newcommand{\lettestiv}[1]{\relax}
 
   \locallydefine{\deftesti}
     {\expandafter\def\expandafter\deftesti\expandafter{\expecteddeftesti}}
@@ -424,6 +422,10 @@
   \locallydefine{\lettestiii}
     {\let\lettestiii\expectedlettestiii}
   \ExpectIfThen{\ifx\lettestiii\expectedlettestiii\boolean{true}\else\boolean{false}\fi}
+
+  \locallydefine{\lettestiv}
+    {\let\lettestiv\expectedlettestiv}
+  \ExpectIfThen{\ifx\lettestiv\expectedlettestiv\boolean{true}\else\boolean{false}\fi}
 
   \undef\testi\undef\bad\undef\undefined
   \locallydefine{\testi}{\let\testi\@gobble\def\bad{\relax}}
